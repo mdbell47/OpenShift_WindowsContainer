@@ -1,0 +1,74 @@
+
+
+# Create Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nginx
+
+# Create Deployment
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: win-nginx
+  name: win-nginx
+  namespace: nginx
+spec:
+  selector:
+    matchLabels:
+      app: win-nginx
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: win-nginx
+      name: win-nginx
+    spec:
+      containers:
+      - name: windowswebserver
+        image: docker.io/mdbell47/nginx:v4
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsNonRoot: false
+          windowsOptions:
+            runAsUserName: "ContainerAdministrator"
+      os:
+        name: "windows"
+      runtimeClassName: windows2019
+
+
+# Create a LB service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: win-nginx
+  namespace: nginx
+  labels:
+    app: win-nginx
+spec:
+  ports:
+    # the port that this service should serve on
+  - port: 80
+    targetPort: 80
+  selector:
+    app: win-nginx
+  type: ClusterIP
+
+# Create Route
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: win-nginx
+  namespace: nginx
+spec:
+  to:
+    kind: Service
+    name: win-nginx
+  port:
+    targetPort: 80
+  tls:
+    termination: edge
